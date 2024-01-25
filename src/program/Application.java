@@ -1,6 +1,7 @@
 package program;
 
 import exceptions.AlfanumericoException;
+import exceptions.ErroConsultaCep;
 import exceptions.OitoCaracteresException;
 
 import java.io.IOException;
@@ -13,29 +14,34 @@ import java.util.Scanner;
 public class Application {
     public static void main(String[] args) throws IOException, InterruptedException {
         Scanner leitura = new Scanner(System.in);
-        System.out.print("Digite um CEP, para busca: ");
-        String cep = leitura.nextLine();
-        String enderecoCepApi = "https://viacep.com.br/ws/" + cep + "/json/";
-        
-        try {
-            ValidarCep(cep);
-            System.out.println("Validando o CEP, aguarde...");
+        String cep = "";
 
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(enderecoCepApi)).build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            String json = (String)response.body();
+        while (!cep.equalsIgnoreCase("sair")){
+            System.out.print("Digite um CEP, para busca: ");
+            cep = leitura.nextLine();
 
-            if (json.contains("\"erro\": true")) {
-                System.out.println("CEP não encontrado.");
-            } else {
-                System.out.println(json);
+            String enderecoCepApi = "https://viacep.com.br/ws/" + cep + "/json/";
+
+            try {
+                ValidarCep(cep);
+                System.out.println("Validando o CEP, aguarde...");
+
+                HttpClient client = HttpClient.newHttpClient();
+                HttpRequest request = HttpRequest.newBuilder().uri(URI.create(enderecoCepApi)).build();
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                String json = (String) response.body();
+
+                if (json.contains("\"erro\": true")) {
+                    System.out.println("CEP não encontrado.");
+                } else if (response.statusCode() == 400){
+                    throw new ErroConsultaCep("Não foi possivel encontrar o CEP.");
+                } else {
+                    System.out.println(json);
+                }
+
+            } catch (OitoCaracteresException | AlfanumericoException | ErroConsultaCep e) {
+                System.out.println(e.getMessage());
             }
-
-        } catch (OitoCaracteresException e) {
-            System.out.println(e.getMessage());
-        } catch (AlfanumericoException e) {
-            System.out.println(e.getMessage());
         }
 
         leitura.close();
